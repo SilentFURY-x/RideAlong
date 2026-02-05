@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import CreateRideModal from "@/components/dashboard/CreateRideModal";
 import CurrentRideCard from "@/components/dashboard/CurrentRideCard";
 import { Ride } from "@/types";
-import { collection, query, where, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, deleteDoc, doc, updateDoc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
@@ -19,44 +19,85 @@ export default function DashboardPage() {
   const [activeRide, setActiveRide] = useState<Ride | null>(null);
   const [loadingRide, setLoadingRide] = useState(true);
 
-  // 1. Listen for Active Rides
+  // 1. Listen for Active Rides (Host OR Passenger) & Auto-Purge Logic
   useEffect(() => {
     if (!user) return;
 
-    // Query: Find rides where I am the host AND status is 'active'
-    const q = query(
+    // 1. Am I a Host?
+    const qHost = query(
       collection(db, "rides"),
       where("hostId", "==", user.uid),
       where("status", "==", "active")
     );
 
-    // Real-time listener
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // 2. Am I a Passenger?
+    const qPassenger = query(
+      collection(db, "rides"),
+      where("passengers", "array-contains", user.uid),
+      where("status", "==", "active")
+    );
+
+    const handleSnapshot = (snapshot: any) => {
       if (!snapshot.empty) {
         const rideDoc = snapshot.docs[0];
-        setActiveRide({ id: rideDoc.id, ...rideDoc.data() } as Ride);
-      } else {
-        setActiveRide(null);
-      }
-      setLoadingRide(false);
-    });
+        const rideData = { id: rideDoc.id, ...rideDoc.data() } as Ride;
 
-    return () => unsubscribe();
+        // --- AUTO PURGE LOGIC ---
+        // Check if ride date is in the past
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        if (rideData.date < today) {
+            console.log("Purging expired ride:", rideData.id);
+            // FIX: Use rideDoc.id (guaranteed string) instead of rideData.id
+            deleteDoc(doc(db, "rides", rideDoc.id)); 
+            setActiveRide(null); 
+        } else {
+            setActiveRide(rideData);
+        }
+      }
+    };
+
+    // Activate Listeners
+    const unsubHost = onSnapshot(qHost, handleSnapshot);
+    const unsubPass = onSnapshot(qPassenger, handleSnapshot);
+
+    // If both return empty (handled by state staying null if no updates)
+    setTimeout(() => setLoadingRide(false), 500);
+
+    return () => {
+        unsubHost();
+        unsubPass();
+    };
   }, [user]);
 
-  // 2. Handle Cancel Ride
+  // Action: Host Cancels Ride
   const handleCancelRide = async () => {
     if (!activeRide?.id) return;
-    
-    const confirm = window.confirm("Are you sure you want to cancel this ride?");
-    if (confirm) {
+    if (confirm("Are you sure you want to cancel this ride? This cannot be undone.")) {
       try {
-        await deleteDoc(doc(db, "rides", activeRide.id));
+        // We use ! to tell TypeScript "I promise ID exists here"
+        await deleteDoc(doc(db, "rides", activeRide.id!));
         toast.success("Ride cancelled successfully");
-        // Snapshot will automatically update the UI to null
+        setActiveRide(null);
       } catch (error) {
         toast.error("Error cancelling ride");
       }
+    }
+  };
+
+  // Action: Passenger Leaves Ride
+  const handleLeaveRide = async () => {
+    if (!activeRide?.id || !user) return;
+    if (confirm("Are you sure you want to leave this ride?")) {
+        try {
+            await updateDoc(doc(db, "rides", activeRide.id!), {
+                passengers: arrayRemove(user.uid)
+            });
+            toast.success("You left the ride");
+            setActiveRide(null);
+        } catch (error) {
+            toast.error("Error leaving ride");
+        }
     }
   };
 
@@ -69,7 +110,7 @@ export default function DashboardPage() {
         </h1>
         <p className="text-slate-500">
           {activeRide 
-            ? "Manage your current trip or explore others."
+            ? "Manage your current trip below."
             : "Find a ride or create one to get started."}
         </p>
       </div>
@@ -80,23 +121,27 @@ export default function DashboardPage() {
             <Loader2 className="w-8 h-8 animate-spin text-slate-300" />
         </div>
       ) : activeRide ? (
-        /* OPTION A: Show Current Ride if it exists */
+        /* OPTION A: Show Current Ride (Host or Passenger) */
         <div className="max-w-4xl mx-auto mt-8 space-y-6">
-            <CurrentRideCard ride={activeRide} onCancel={handleCancelRide} />
+            <CurrentRideCard 
+                ride={activeRide} 
+                isHost={activeRide.hostId === user?.uid}
+                onAction={activeRide.hostId === user?.uid ? handleCancelRide : handleLeaveRide} 
+            />
             
-            {/* Still show Explore button below */}
+            {/* Explore Button */}
             <div className="flex justify-center">
                 <Link
                   href="/explore"
                   className="text-slate-500 hover:text-[#0F4C75] font-medium text-sm flex items-center gap-2 transition-colors"
                 >
                   <Search className="w-4 h-4" />
-                  Look for other rides instead
+                  Look for other rides (View Only)
                 </Link>
             </div>
         </div>
       ) : (
-        /* OPTION B: Show Action Buttons if NO ride exists */
+        /* OPTION B: Show Action Buttons (Only if NO active ride) */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mt-12">
             <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -133,7 +178,7 @@ export default function DashboardPage() {
       <CreateRideModal 
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)}
-        onRideCreated={() => {}} // No need to manually refresh, listener handles it!
+        onRideCreated={() => {}} 
       />
     </div>
   );

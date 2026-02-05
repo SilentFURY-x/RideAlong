@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "sonner";
+import AnimatedBackground from "@/components/ui/AnimatedBackground";
+import CustomCursor from "@/components/ui/CustomCursor";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,10 +21,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {/* AuthProvider wraps EVERYTHING so we can check login status anywhere */}
         <AuthProvider>
-          {children}
-          {/* Toaster allows us to show success/error messages on top of any screen */}
+          {/* Background is fixed at z-index -1 */}
+          <AnimatedBackground />
+          
+          {/* Cursor is fixed at z-index 9999 */}
+          <CustomCursor />
+          
+          {/* Main App Content */}
+          <div className="relative z-0">
+            {children}
+          </div>
+          
           <Toaster position="bottom-right" richColors />
         </AuthProvider>
       </body>

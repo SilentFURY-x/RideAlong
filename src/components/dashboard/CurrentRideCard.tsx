@@ -1,24 +1,29 @@
 "use client";
 
 import { Ride } from "@/types";
-import { MapPin, Calendar, Clock, Users, ArrowRight } from "lucide-react";
+import { Calendar, Clock, Users, ArrowRight, Trash2, LogOut } from "lucide-react";
 import Link from "next/link";
 
 interface CurrentRideCardProps {
   ride: Ride;
-  onCancel: () => void; // We will hook this up later
+  isHost: boolean; // <--- New Prop
+  onAction: () => void; // Triggers Cancel (if Host) or Leave (if Passenger)
 }
 
-export default function CurrentRideCard({ ride, onCancel }: CurrentRideCardProps) {
+export default function CurrentRideCard({ ride, isHost, onAction }: CurrentRideCardProps) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       {/* Header with Teal Gradient */}
       <div className="bg-gradient-to-r from-[#2C5364] to-[#203A43] p-6 text-white">
         <div className="flex justify-between items-start">
           <div>
-            <span className="inline-block px-2 py-1 bg-white/20 rounded text-xs font-medium mb-3 backdrop-blur-sm">
-              Hosting
+            {/* Status Badge */}
+            <span className={`inline-block px-2 py-1 rounded text-xs font-bold mb-3 backdrop-blur-sm ${
+                isHost ? "bg-blue-500/30 text-blue-50 border border-blue-400/30" : "bg-purple-500/30 text-purple-50 border border-purple-400/30"
+            }`}>
+              {isHost ? "YOU ARE HOSTING" : "PASSENGER TICKET"}
             </span>
+            
             <div className="flex items-center gap-3">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
@@ -35,7 +40,6 @@ export default function CurrentRideCard({ ride, onCancel }: CurrentRideCardProps
           </div>
           
           <div className="text-right">
-             {/* Pending Requests Badge logic can go here later */}
              <div className="px-3 py-1 bg-white/10 rounded-full text-xs backdrop-blur-sm">
                 Active Ride
              </div>
@@ -63,17 +67,21 @@ export default function CurrentRideCard({ ride, onCancel }: CurrentRideCardProps
         </div>
 
         <div className="flex gap-3">
+             {/* Dynamic Action Button */}
              <button 
-                onClick={onCancel}
-                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
+                onClick={onAction}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
+                title={isHost ? "Delete this ride" : "Leave this ride"}
              >
-                Cancel Ride
+                {isHost ? <Trash2 className="w-4 h-4"/> : <LogOut className="w-4 h-4"/>}
+                {isHost ? "Cancel Ride" : "Leave Ride"}
              </button>
+             
              <Link
                 href={`/rides/${ride.id}`}
                 className="px-4 py-2 text-sm bg-slate-900 text-white hover:bg-slate-800 rounded-lg font-medium transition-all flex items-center gap-2"
              >
-                Manage Ride
+                Ride Details
                 <ArrowRight className="w-4 h-4" />
              </Link>
         </div>
