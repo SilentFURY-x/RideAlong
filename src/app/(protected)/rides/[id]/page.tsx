@@ -90,6 +90,7 @@ export default function RideDetailsPage() {
         userId: user.uid,
         userName: user.displayName,
         userEmail: user.email,
+        hostId: ride.hostId,
         status: "pending",
         timestamp: Date.now()
       });
