@@ -37,7 +37,7 @@ export default function LoginPage() {
         </div>
 
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          Student Ride Share
+          Ride Along
         </h1>
         <p className="text-slate-600 mb-8 text-sm leading-relaxed font-medium">
           Connect with students traveling to the same destination

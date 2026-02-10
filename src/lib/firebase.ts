@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAu2di7V_txkv4Pwd4GyAyBEq98ZUCikDY",
-  authDomain: "ridealong2-fury.firebaseapp.com",
-  projectId: "ridealong2-fury",
-  storageBucket: "ridealong2-fury.firebasestorage.app",
-  messagingSenderId: "360429209250",
-  appId: "1:360429209250:web:dab43422123887a3d179fb"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase (Singleton pattern to avoid re-initialization errors)
